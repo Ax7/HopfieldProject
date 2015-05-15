@@ -1,6 +1,6 @@
-import hopfield_final
+import hopfield
 
-hn = hopfield_final.hopfield_network()
+hn = hopfield.hopfield_network()
 
 for i in range(1, 100):
 	print hn.hopfield_run(i, 10, 0.8, 1000, 5, 1, 0.1)

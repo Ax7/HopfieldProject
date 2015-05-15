@@ -1,61 +1,56 @@
+import hopfield
 import matplotlib.pyplot as plt
-import hopfield_final
-hn = hopfield_final.hopfield_network()
 
-npoints = 5
-K = 10
+hn = hopfield.hopfield_network()
+
 N_vec = []
-P_size_vec = []
-temp_error = 0
-lowerbound = 1
-upperbound = 100
-P_size = 50
-error = []
-l_error = 0
-u_error = 0
-target_error = 0.05
-temp_error = 10
-for N in xrange(100,1000,(1000-100)/npoints):
+dictionarySize_vec = []
 
-    while(abs(temp_error-target_error)>0.005):
-    	#if (P_size % 5 == 0):
-    	#	print('Psize', P_size, ' av_error', temp_error)
+nbOfTests = 2
+targetError = 0.05
+sigmaError = 0.001
+networkSizeMin = 10
+networkSizeMax = 20
+networkStep = 2
+networkSizeList = xrange(networkSizeMin, networkSizeMax + 1, networkStep)
 
-        error = []
-    	for i in range(1,K):
-    		error.append(hn.hopfield_run(P_size,N,0.8,1000,5,1,0.1))
-        temp_error = sum(error)/K
+def computeBoundError(bound, networkSize, nbOfTests, hn):
+	recordedError = []
+	for i in xrange(1, nbOfTests):
+		recordedError.append(hn.hopfield_run(bound, networkSize, 0.8, 1000, 5, 1, 0.1))
+	return sum(recordedError)/nbOfTests
 
-        if(temp_error>target_error):
-            upperbound = P_size
-            u_error = temp_error
+for netSize in networkSizeList:
+	print '['+str(netSize)+']', ' --- starting ---'
+	lowerBound = 1
+	upperBound = 100
+	lowerBoundError = 0
+	# Compute upperBound error
+	upperBoundError = computeBoundError(upperBound, netSize, nbOfTests, hn)
+	while(abs(lowerBoundError - targetError) > sigmaError and abs(upperBound - lowerBound) > 1 and lowerBoundError < targetError):
+		# Bigger then upperBound
+		if(upperBoundError < targetError):
+			# We set the lowerBound to upperBound and double the distance of upperBound form lowerBound
+			tmp = upperBound
+			upperBound += abs(upperBound - lowerBound)
+			lowerBound = tmp
+			lowerBoundError = upperBoundError
+			upperBoundError = computeBoundError(upperBound, netSize, nbOfTests, hn)
+		# Smaller then upperBound
+		else:
+			# We reduce by 2 the distace of upperBound to lowerBound
+			upperBound -= int( abs(upperBound - lowerBound) / 2 )
+			upperBoundError = computeBoundError(upperBound, netSize, nbOfTests, hn)
+		print '['+str(netSize)+']', 'lower:', lowerBound, '('+str(lowerBoundError)+')', 'upper:', upperBound, '('+str(upperBoundError)+')'
+	print '['+str(netSize)+']', ' --- result:', lowerBound, '('+str(lowerBoundError)+') ---'
+	dictionarySize_vec.append(lowerBound)
+	N_vec.append(netSize)
 
-            error = []
-            for i in range(1,K):
-    	   	   error.append(hn.hopfield_run(lowerbound,N,0.8,1000,5,1,0.1))
-            l_error = sum(error)/K
-
-        else:
-            lowerbound = P_size
-            l_error = temp_error
-            error = []
-            for i in range(1,K):
-    		  error.append(hn.hopfield_run(upperbound,N,0.8,1000,5,1,0.1))
-            u_error = sum(error)/K
-
-        if (target_error>u_error):
-            lowerbound = upperbound
-            upperbound = upperbound*2
-
-        print('lerror',l_error)
-        print('uerror',u_error)
-        temp_error = (upperbound + lowerbound) / 2
-        P_size = int((upperbound+lowerbound)/2)
-        print('lbound',lowerbound)
-        print('ubound',upperbound)
-
-    P_size_vec.append(P_size)
-    N_vec.append(N)
-
-plt.plot(N_vec,P_size_vec)
+# Generating the plot
+plt.plot(N_vec,dictionarySize_vec, 'bo-')
+plt.xlabel('Network size')
+plt.ylabel('Dictionary size')
+plt.title('Exercice 2 - Threshold ' + str(targetError) + r'$- \sigma$ (' + str(sigmaError) + ')')
+plt.grid(True)
 plt.savefig('Ex2_01.png')
+
